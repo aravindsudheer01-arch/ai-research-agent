@@ -10,12 +10,12 @@ from langchain.tools import tool
 def web_search(query: str) -> str:
     """Search the web for relevant titles, URLs and short snippets about a research question."""
     try:
-        matches = DDGS().text(query, max_results=5)
+        matches = DDGS(timeout=10).text(query[:500], max_results=3)
         results = [
             {
                 "title": item.get("title", ""),
                 "href": item.get("href", ""),
-                "body": item.get("body", ""),
+                "body": str(item.get("body", ""))[:1200],
             }
             for item in matches
             if item.get("href")

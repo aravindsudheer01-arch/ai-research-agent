@@ -11,7 +11,7 @@ def reconcile_tool_evidence(messages: list, requested_sources: list[str]) -> dic
         if getattr(message, "type", None) != "tool":
             continue
         name = getattr(message, "name", "")
-        if name:
+        if name == "web_search":
             used.add(name)
         if name != "web_search":
             continue
