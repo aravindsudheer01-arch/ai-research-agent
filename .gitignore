@@ -17,3 +17,9 @@ outputs/
 
 # Mac files
 .DS_Store
+
+# Server-only demo credentials
+.streamlit/secrets.toml
+.pytest_cache/
+
+.venv312/
