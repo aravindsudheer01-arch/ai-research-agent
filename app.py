@@ -5,6 +5,7 @@ import streamlit as st
 from dotenv import load_dotenv
 from demo_limits import reserve_request
 from main import run_research
+from errors import research_error_message
 from providers import ModelSettings
 
 load_dotenv()
@@ -43,8 +44,8 @@ if submitted:
                 try:
                     with st.spinner('Searching and preparing your report…'):
                         st.session_state.report = run_research(query)
-                except Exception:
-                    st.error('Research could not finish. The provider may be rate-limited or search may be unavailable. Please try later.')
+                except Exception as exc:
+                    st.error(research_error_message(exc))
 
 if 'report' in st.session_state:
     report = st.session_state.report

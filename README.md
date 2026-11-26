@@ -31,7 +31,7 @@ The default model is `openai/gpt-oss-20b`, served by **Groq**. The model's names
 
 When switching, change both provider and model; `.env.example` explicitly sets the Groq model. Compatible providers must implement OpenAI-style chat completions and tool calling. This is an extension point, not a promise that every model/provider works. Local endpoints may use a placeholder key if their server does not require authentication. Remote endpoints must use HTTPS.
 
-`providers.py` creates the model; `main.py` owns the research workflow. We explicitly use LangChain `ToolStrategy` for report validation because Groq does not currently combine native structured output with tool use. No automatic fallback to a billable provider occurs.
+`providers.py` creates the model; `main.py` owns the research workflow. Research runs one deterministic web search, followed by one JSON-mode formatting call validated with Pydantic. This avoids forced report-tool calls that Groq can reject when the model answers in plain text. No automatic fallback to a billable provider occurs.
 
 ## Publish the portfolio demo
 
@@ -54,7 +54,7 @@ Do not put the key in GitHub Pages HTML, browser JavaScript, a screenshot, or a 
 ### Demo limits and privacy
 
 - Up to 500 characters per question, three search results per search and 1,200 characters per snippet.
-- A six-step agent recursion limit, a 2,048-token output limit per model call, 45-second model-call timeout and no automatic API retries. A research run can use several model/search calls; these are not token-budget guarantees.
+- One model call per run, with a 2,048-token output limit, 45-second model-call timeout and no automatic API retries. Search retries once after a transient failure, with a 10-second timeout per attempt. Provider token quotas still apply.
 - Shared allowance: one run per rolling minute and 20 per rolling 24 hours, reserved atomically in SQLite. Failed runs count too.
 - SQLite tracks timestamps only. The web app keeps reports in the visitor's session and offers a download; it does not append them to the CLI report file.
 - The limiter is for a **single deployment with shared local storage**. Ephemeral storage resets on redeploy; multiple replicas require a shared external limiter. It is not a substitute for provider limits or billing controls. Public visitors can exhaust the shared allowance.
@@ -67,12 +67,12 @@ python -m pip install pytest
 python -m pytest -q
 ```
 
-Offline tests cover provider configuration, agent output strategy, evidence filtering, input validation, atomic demo limits, Streamlit startup and a mocked successful report. They do not establish live model quality or account access. A live smoke test needs an actual Groq key.
+Offline tests cover provider configuration, JSON output strategy, evidence filtering, input validation, atomic demo limits, Streamlit startup and a mocked successful report. They do not establish live model quality or account access. A live smoke test needs an actual Groq key.
 
 ## Files
 
 - `providers.py`: provider settings and model factory
-- `main.py`: bounded tool-calling workflow and CLI
+- `main.py`: bounded search-and-summary workflow and CLI
 - `app.py`: Streamlit interface
 - `tools.py`: DDGS search
 - `reporting.py`: observed-source reconciliation
@@ -84,3 +84,5 @@ Offline tests cover provider configuration, agent output strategy, evidence filt
 Search results are snippets, not full documents. A returned URL does not prove that it supports a claim. Model prose can still contain mistakes or unsupported links; only the separate sources list is reconciled. DDGS can fail or be rate-limited. Provider quotas may interrupt an otherwise valid research run. The UI reports failures without displaying raw exceptions or credentials.
 
 Original project: Python, LangChain, OpenAI and structured web research. This revision introduces Groq, provider configuration and a portfolio interface while retaining the existing report schema and CLI output.
+
+The original autonomous tool-calling loop has been replaced with a bounded retrieval-and-summary workflow for the free-tier demo. This avoids forced-tool-choice HTTP 400 errors and repeated-search recursion failures; the model does not autonomously plan searches.

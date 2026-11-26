@@ -1,7 +1,14 @@
+import pytest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from demo_limits import reserve_request
 from streamlit.testing.v1 import AppTest
+
+@pytest.fixture(autouse=True)
+def isolate_local_secrets(monkeypatch):
+    monkeypatch.setattr('dotenv.load_dotenv', lambda *args, **kwargs: False)
+    for key in ('GROQ_API_KEY', 'OPENAI_API_KEY', 'LLM_API_KEY', 'LLM_MODEL', 'LLM_PROVIDER'):
+        monkeypatch.delenv(key, raising=False)
 
 def test_shared_budget_and_expiry(tmp_path):
     path = tmp_path / 'usage.sqlite3'
